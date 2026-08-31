@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Moderation — Bikibedia{% endblock %}
+
+{% block content %}
+<h1 id="firstHeading">Moderation queue</h1>
+<p class="moderation-lead">
+    <span data-live-moderation-text>{{ pending_count }} submission{{ pending_count|pluralize }}</span>
+    waiting for review.
+    <a href="{% url 'moderation_log' %}">View full log</a>
+</p>
+
+<div class="moderation-grid">
+    <section class="portal-box">
+        <h2>New articles</h2>
+        {% if pending_articles %}
+            <ul class="moderation-list">
+                {% for item in pending_articles %}
+                    <li>
+                        <div class="moderation-list-main">
+                            <a href="{% url 'moderation_review_article' item.pk %}">{{ item.title }}</a>
+                            <span class="meta">
+                                {% if item.author %}{{ item.author.username }}{% else %}Unknown{% endif %}
+                                · {{ item.submitted_at|default:item.created_at|date:"M j, Y, g:i A" }}
+                            </span>
+                        </div>
+                        <a href="{% url 'moderation_review_article' item.pk %}" class="btn btn-small btn-primary">Review</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="moderation-empty">No new articles in the queue.</p>
+        {% endif %}
+    </section>
+
+    <section class="portal-box">
+        <h2>Article edits</h2>
+        {% if pending_revisions %}
+            <ul class="moderation-list">
+                {% for item in pending_revisions %}
+                    <li>
+                        <div class="moderation-list-main">
+                            <a href="{% url 'moderation_review_revision' item.pk %}">{{ item.title }}</a>
+                            <span class="meta">
+                                {{ item.submitted_by.username }}
+                                · edit to <em>{{ item.article.title }}</em>
+                                · {{ item.created_at|date:"M j, Y, g:i A" }}
+                            </span>
+                        </div>
+                        <a href="{% url 'moderation_review_revision' item.pk %}" class="btn btn-small btn-primary">Review</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="moderation-empty">No pending edits.</p>
+        {% endif %}
+    </section>
+</div>
+
+<section class="portal-box mod-log-panel">
+    <div class="mod-log-panel-head">
+        <h2>Recent activity</h2>
+        <a href="{% url 'moderation_log' %}" class="btn btn-small">Full log</a>
+    </div>
+    {% if recent_log %}
+        <ul class="mod-log-list mod-log-list--compact" data-live-moderation-log>
+            {% for entry in recent_log %}
+                {% include "includes/moderation_log_entry.html" %}
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="moderation-empty" data-live-moderation-log>No moderation activity yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,53 @@
+<div class="profile-card" hidden>
+    <div class="profile-card-arrow" aria-hidden="true"></div>
+    <div class="profile-card-inner">
+        <div class="profile-card-header">
+            <div class="profile-card-avatar">
+                {% if card_profile.avatar %}
+                    <img src="{{ card_profile.avatar.url }}" alt="{{ card_user.username }}">
+                {% else %}
+                    <span class="avatar-placeholder">{{ card_profile.initials }}</span>
+                {% endif %}
+            </div>
+            <div class="profile-card-head">
+                <strong class="profile-card-name">{{ card_user.username }}</strong>
+                <span class="profile-card-badge">{{ card_role }}</span>
+                {% if card_user == user %}
+                    <span class="profile-card-hint">This tab session</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="profile-card-meta">
+            <p>Joined {{ card_user.date_joined|date:"M j, Y" }}</p>
+            {% if card_profile.birth_date %}
+                <p>Birth date {{ card_profile.birth_date|date:"M j, Y" }}</p>
+            {% endif %}
+        </div>
+        <div class="profile-card-stats">
+            <div class="profile-card-stat">
+                <span>Articles</span>
+                <strong>{{ card_articles_count }}</strong>
+            </div>
+            <div class="profile-card-stat">
+                <span>Status</span>
+                <strong class="presence-status {% if card_profile.is_online %}presence-status--active{% else %}presence-status--inactive{% endif %}">{{ card_profile.presence_status }}</strong>
+            </div>
+            <div class="profile-card-stat">
+                <span>Role</span>
+                <strong>{% if card_user.is_staff %}Staff{% else %}User{% endif %}</strong>
+            </div>
+        </div>
+        {% if card_user == user %}
+            <div class="profile-card-theme">
+                <div class="profile-theme-setting-copy">
+                    <strong>Appearance</strong>
+                    <span>Light or dark theme for this browser.</span>
+                </div>
+                {% include "includes/theme_dock.html" with dock_class="theme-dock--compact" %}
+            </div>
+            <a href="{% url 'profile' %}" class="profile-card-link">My account →</a>
+        {% elif card_user.is_staff %}
+            <span class="profile-card-footnote">Bikibedia contributor</span>
+        {% endif %}
+    </div>
+</div>

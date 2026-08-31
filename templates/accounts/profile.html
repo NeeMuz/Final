@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My account — Bikibedia{% endblock %}
+
+{% block content %}
+<h1 id="firstHeading">My account</h1>
+
+<div class="profile-grid">
+    <section class="portal-box">
+        <div class="profile-header-row">
+            <h2>Profile</h2>
+            {% if not editing %}
+                <a href="{% url 'profile' %}?edit=1" class="btn btn-primary">Edit profile</a>
+            {% endif %}
+        </div>
+
+        {% if editing and form %}
+            <form id="profile-settings-form" class="profile-settings-form mw-form" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {% include "includes/tab_post_fields.html" %}
+                {% if form.non_field_errors %}
+                    <div class="form-errors">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="profile-avatar-block profile-avatar-block--editing">
+                    <div class="profile-avatar-large" id="profile-avatar-wrap">
+                        <img id="profile-avatar-preview" class="profile-avatar-preview"{% if profile.avatar %} src="{{ profile.avatar.url }}" alt="Your photo"{% else %} hidden alt=""{% endif %}>
+                        <span id="profile-avatar-placeholder" class="avatar-placeholder"{% if profile.avatar %} hidden{% endif %}>{{ profile.initials }}</span>
+                    </div>
+                    <label class="profile-avatar-picker btn btn-outline">
+                        Choose image
+                        {{ form.avatar }}
+                    </label>
+                </div>
+
+                <label for="{{ form.username.id_for_label }}">Username</label>
+                {{ form.username }}
+                {% if form.username.errors %}<div class="field-error">{{ form.username.errors }}</div>{% endif %}
+
+                <label for="{{ form.birth_date.id_for_label }}">Date of birth</label>
+                {{ form.birth_date }}
+                {% if form.birth_date.errors %}<div class="field-error">{{ form.birth_date.errors }}</div>{% endif %}
+
+                <label for="{{ form.email.id_for_label }}">Email</label>
+                {{ form.email }}
+                {% if form.email.errors %}<div class="field-error">{{ form.email.errors }}</div>{% endif %}
+
+                {% if form.avatar.errors %}
+                    <div class="field-error">{{ form.avatar.errors }}</div>
+                {% endif %}
+
+                <div class="profile-security-teaser">
+                    <div class="profile-security-teaser-copy">
+                        <strong>Password</strong>
+                        <span>Update your sign-in key in the security vault.</span>
+                    </div>
+                    <a href="{% url 'change_password' %}" class="btn btn-outline profile-security-btn">Change password</a>
+                </div>
+
+                <div class="profile-theme-setting">
+                    <div class="profile-theme-setting-copy">
+                        <strong>Appearance</strong>
+                        <span>Switch between light and dark theme. This only affects this browser.</span>
+                    </div>
+                    {% include "includes/theme_dock.html" %}
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                    <a href="{% url 'profile' %}" class="btn">Cancel</a>
+                </div>
+            </form>
+        {% else %}
+            <div class="profile-avatar-block">
+                <div class="profile-avatar-large">
+                    {% if profile.avatar %}
+                        <img src="{{ profile.avatar.url }}" alt="Your photo">
+                    {% else %}
+                        <span class="avatar-placeholder">{{ profile.initials }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <dl class="profile-info">
+                <div class="profile-info-row">
+                    <dt>Username</dt>
+                    <dd>{{ user.username }}</dd>
+                </div>
+                <div class="profile-info-row">
+                    <dt>Date of birth</dt>
+                    <dd>{% if profile.birth_date %}{{ profile.birth_date|date:"M j, Y" }}{% else %}—{% endif %}</dd>
+                </div>
+                <div class="profile-info-row">
+                    <dt>Status</dt>
+                    <dd>
+                        <span class="presence-status {% if profile.is_online %}presence-status--active{% else %}presence-status--inactive{% endif %}">{{ profile.presence_status }}</span>
+                    </dd>
+                </div>
+                <div class="profile-info-row">
+                    <dt>Email</dt>
+                    <dd>{{ user.email|default:"—" }}</dd>
+                </div>
+            </dl>
+
+            <div class="form-actions profile-view-actions">
+                <div class="profile-theme-setting">
+                    <div class="profile-theme-setting-copy">
+                        <strong>Appearance</strong>
+                        <span>Switch between light and dark theme.</span>
+                    </div>
+                    {% include "includes/theme_dock.html" %}
+                </div>
+                <a href="{% url 'change_password' %}" class="btn btn-outline profile-security-btn">Change password</a>
+                <a href="{% url 'article_create' %}" class="btn btn-primary">Create article</a>
+                {% if user.is_staff %}
+                    <a href="/admin/" class="btn btn-admin" target="_blank" rel="noopener noreferrer">Admin panel</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </section>
+
+    <section class="portal-box">
+        <h2>My articles ({{ user_articles|length }})</h2>
+        {% if user_articles %}
+            <ul class="article-list">
+                {% for item in user_articles %}
+                    <li>
+                        <a href="{% url 'article' item.slug %}">{{ item.title }}</a>
+                        <span class="article-status-chip article-status-chip--{{ item.status }}">{{ item.status_label }}</span>
+                        <span class="meta">Updated {{ item.updated_at|date:"M j, Y, g:i A" }}</span>
+                        <a href="{% url 'article_edit' item.slug %}" class="article-action">Edit</a>
+                        <form class="delete-form profile-delete-form" action="{% url 'article_delete' item.slug %}{% if bikibedia_tab_id %}?__tab={{ bikibedia_tab_id }}{% endif %}" method="post"
+                            data-confirm
+                            data-confirm-title="Delete «{{ item.title }}»?"
+                            data-confirm-message="This article will be permanently removed. This cannot be undone."
+                            data-confirm-ok="Delete"
+                            data-confirm-variant="danger">
+                            {% csrf_token %}
+                            {% include "includes/tab_post_fields.html" %}
+                            <button type="submit" class="article-action article-action--delete">Delete</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>You have not published any articles yet.</p>
+            <a href="{% url 'article_create' %}" class="btn btn-primary">Write your first article</a>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if editing and form %}
+<script src="{% static 'wiki/js/profile-settings.js' %}?v=4"></script>
+{% endif %}
+{% endblock %}

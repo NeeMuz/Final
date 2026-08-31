@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Main Page — Bikibedia{% endblock %}
+
+{% block content %}
+<section class="home-hero">
+    <div class="home-hero-inner">
+        <p class="home-hero-eyebrow">Main Page</p>
+        <h1 id="firstHeading" class="home-hero-title">Welcome to <span>Bikibedia</span></h1>
+        <p class="home-hero-lead">The free encyclopedia that anyone can edit. Explore what others have written, or start a page of your own.</p>
+
+        <div class="home-hero-stats">
+            <div class="home-stat">
+                <strong data-live-article-count>{{ article_count }}</strong>
+                <span>article{{ article_count|pluralize }}</span>
+            </div>
+            <div class="home-stat">
+                <strong>{{ contributor_count }}</strong>
+                <span>contributor{{ contributor_count|pluralize }}</span>
+            </div>
+        </div>
+
+        <div class="hero-actions">
+            {% if user.is_authenticated %}
+                <a href="{% url 'article_create' %}" class="btn btn-primary">Create article</a>
+                <a href="{% url 'articles' %}" class="btn">Browse articles</a>
+                <a href="{% url 'profile' %}" class="btn">My account</a>
+            {% else %}
+                <a href="{% url 'register' %}" class="btn btn-primary">Join Bikibedia</a>
+                <a href="{% url 'articles' %}" class="btn">Browse articles</a>
+                <a href="{% url 'login' %}" class="btn">Log in</a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{% if featured_article %}
+<section class="home-featured" aria-labelledby="home-featured-heading">
+    <article class="home-featured-card">
+        {% if featured_article.image %}
+            <a href="{% url 'article' featured_article.slug %}" class="home-featured-image">
+                <img src="{{ featured_article.image.url }}" alt="{{ featured_article.title }}">
+            </a>
+        {% endif %}
+        <div class="home-featured-body">
+            <p class="home-section-label" id="home-featured-heading">Featured article</p>
+            <h2 class="home-featured-title">
+                <a href="{% url 'article' featured_article.slug %}">{{ featured_article.title }}</a>
+            </h2>
+            <p class="home-featured-intro">{{ featured_article.introduction|truncatewords:42 }}</p>
+            <p class="home-featured-meta">Updated {{ featured_article.updated_at|date:"M j, Y" }}</p>
+            <p class="read-more">
+                <a href="{% url 'article' featured_article.slug %}" class="btn btn-primary btn-small">Read article</a>
+            </p>
+        </div>
+    </article>
+</section>
+{% endif %}
+
+<div class="home-layout">
+    <section class="portal-box home-latest">
+        <h2>Latest articles</h2>
+        {% if latest_articles %}
+            <ul class="home-latest-list" data-live-article-list data-live-limit="6">
+                {% for item in latest_articles %}
+                    <li data-article-slug="{{ item.slug }}">
+                        <a href="{% url 'article' item.slug %}" class="home-latest-link">{{ item.title }}</a>
+                        <time datetime="{{ item.updated_at|date:'c' }}">{{ item.updated_at|date:"M j, Y" }}</time>
+                    </li>
+                {% endfor %}
+            </ul>
+            <p class="read-more"><a href="{% url 'articles' %}" class="btn btn-small">All articles</a></p>
+        {% else %}
+            <p class="home-empty">No articles yet.
+            {% if user.is_authenticated %}
+                <a href="{% url 'article_create' %}">Create the first one</a>.
+            {% else %}
+                <a href="{% url 'register' %}">Sign up</a> to write the first one.
+            {% endif %}
+            </p>
+        {% endif %}
+    </section>
+
+    <aside class="portal-box home-explore">
+        <h2>Explore</h2>
+        <ul class="home-explore-links">
+            <li><a href="{% url 'articles' %}">Browse all articles</a></li>
+            {% if discover_article %}
+                <li><a href="{% url 'article' discover_article.slug %}">Surprise me: {{ discover_article.title }}</a></li>
+            {% endif %}
+            {% if user.is_authenticated %}
+                <li><a href="{% url 'article_create' %}">Write a new article</a></li>
+            {% else %}
+                <li><a href="{% url 'register' %}">Create an account</a></li>
+            {% endif %}
+        </ul>
+
+        <h3 class="home-explore-subtitle">Did you know…</h3>
+        <ul class="home-dyk-list">
+            {% if article_count %}
+                <li>…that Bikibedia currently has {{ article_count }} article{{ article_count|pluralize }}?</li>
+            {% endif %}
+            {% if featured_article %}
+                <li>…that <a href="{% url 'article' featured_article.slug %}">{{ featured_article.title }}</a> was updated most recently?</li>
+            {% endif %}
+            {% if contributor_count %}
+                <li>…that {{ contributor_count }} contributor{{ contributor_count|pluralize }} already wrote here?</li>
+            {% endif %}
+            {% if not article_count %}
+                <li>…that you can be the first person to publish an article on Bikibedia?</li>
+            {% endif %}
+        </ul>
+    </aside>
+</div>
+{% endblock %}

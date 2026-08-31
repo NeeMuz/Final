@@ -1,0 +1,19 @@
+<li class="mod-log-item mod-log-item--{{ entry.tone }}" data-log-id="{{ entry.pk }}">
+    <span class="mod-log-badge mod-log-badge--{{ entry.tone }}">{{ entry.get_action_display }}</span>
+    <div class="mod-log-body">
+        <p class="mod-log-title">
+            {% if entry.article %}
+                <a href="{% url 'article' entry.article.slug %}">{{ entry.target_title }}</a>
+            {% else %}
+                <span class="mod-log-title-plain">{{ entry.target_title }}</span>
+            {% endif %}
+        </p>
+        <p class="mod-log-meta">
+            <strong>{% if entry.actor %}{{ entry.actor.username }}{% else %}system{% endif %}</strong>
+            <time datetime="{{ entry.created_at|date:'c' }}">{{ entry.created_at|date:"M j, Y, g:i A" }}</time>
+        </p>
+        {% if entry.comment %}
+            <p class="mod-log-comment">{{ entry.comment }}</p>
+        {% endif %}
+    </div>
+</li>

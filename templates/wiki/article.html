@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% load static wiki_extras %}
+
+{% block title %}{{ article.title }} — Bikibedia{% endblock %}
+
+{% block content %}
+<h1 id="firstHeading">{{ article.title }}</h1>
+
+{% if not article.is_public %}
+<div class="article-status-banner article-status-banner--{{ article.status }}">
+    <strong>{{ article.status_label }}</strong>
+    {% if article.status == 'pending' %}
+        <span>This article is waiting for moderator review and is visible only to you and staff.</span>
+    {% elif article.status == 'rejected' %}
+        <span>Please update the article and submit it again.</span>
+        {% if article.moderator_comment %}
+            <p class="article-status-comment"><strong>Moderator comment:</strong> {{ article.moderator_comment }}</p>
+        {% endif %}
+    {% endif %}
+</div>
+{% elif pending_revision %}
+<div class="article-status-banner article-status-banner--pending">
+    <strong>Edit under review</strong>
+    <span>Your latest changes are waiting for moderator approval. The live version is still shown below.</span>
+</div>
+{% endif %}
+
+<div class="article-layout">
+    <aside class="infobox">
+        <div class="infobox-title">{{ article.title }}</div>
+        {% if article.image %}
+            <div class="infobox-image">
+                <img src="{{ article.image.url }}" alt="{{ article.title }}">
+            </div>
+        {% endif %}
+        <div class="infobox-meta">
+            <dl>
+                <div class="infobox-meta-item">
+                    <dt>Author</dt>
+                    <dd>
+                        {% if author_card %}
+                            <div class="profile-trigger infobox-author-trigger">
+                                <button type="button" class="infobox-author-btn" data-profile-card-trigger aria-expanded="false">
+                                    {{ author_card.user.username }}
+                                </button>
+                                {% with card_user=author_card.user card_profile=author_card.profile card_role=author_card.role card_articles_count=author_card.articles_count %}
+                                    {% include "includes/user_profile_card.html" %}
+                                {% endwith %}
+                            </div>
+                        {% elif article.author %}
+                            {{ article.author.username }}
+                        {% else %}
+                            Unknown
+                        {% endif %}
+                    </dd>
+                </div>
+                <div class="infobox-meta-item">
+                    <dt>Created</dt>
+                    <dd>{{ article.created_at|date:"M j, Y" }}</dd>
+                </div>
+                <div class="infobox-meta-item">
+                    <dt>Updated</dt>
+                    <dd>
+                        <span class="infobox-date">{{ article.updated_at|date:"M j, Y" }}</span>
+                        <span class="infobox-time">{{ article.updated_at|date:"g:i A" }}</span>
+                    </dd>
+                </div>
+            </dl>
+        </div>
+    </aside>
+
+    <div class="article-text">
+        <p class="lead">{{ article.introduction }}</p>
+        <div class="article-body wiki-formatted">{{ article.body_text|wiki_markup }}</div>
+
+        {% if article.is_public %}
+            {% include "includes/article_vote.html" %}
+        {% endif %}
+
+        {% if can_manage %}
+        <div class="article-actions">
+            <a href="{% url 'article_edit' article.slug %}" class="article-action">Edit</a>
+            <form class="delete-form" action="{% url 'article_delete' article.slug %}{% if bikibedia_tab_id %}?__tab={{ bikibedia_tab_id }}{% endif %}" method="post"
+                data-confirm
+                data-confirm-title="Delete this article?"
+                data-confirm-message="This article will be permanently removed. This cannot be undone."
+                data-confirm-ok="Delete"
+                data-confirm-variant="danger">
+                {% csrf_token %}
+                {% include "includes/tab_post_fields.html" %}
+                <button type="submit" class="article-action article-action--delete">Delete</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <h2 id="See_also">See also</h2>
+        <ul>
+            <li><a href="{% url 'home' %}">Main page</a></li>
+            <li><a href="{% url 'articles' %}">All articles</a></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'wiki/js/article-vote.js' %}?v=1"></script>
+{% endblock %}

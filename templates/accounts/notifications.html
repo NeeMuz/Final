@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications — Bikibedia{% endblock %}
+
+{% block content %}
+<div class="notifications-header">
+    <h1 id="firstHeading">Notifications</h1>
+    {% if notifications %}
+        <div class="notifications-header-actions">
+            <form action="{% url 'notifications_mark_all_read' %}{% if bikibedia_tab_id %}?__tab={{ bikibedia_tab_id }}{% endif %}" method="post">
+                {% csrf_token %}
+                {% include "includes/tab_post_fields.html" %}
+                <button type="submit" class="btn btn-small">Mark all read</button>
+            </form>
+            <form
+                action="{% url 'notifications_delete_all' %}{% if bikibedia_tab_id %}?__tab={{ bikibedia_tab_id }}{% endif %}"
+                method="post"
+                data-confirm
+                data-confirm-title="Delete all notifications?"
+                data-confirm-message="Every notification will be permanently removed. This cannot be undone."
+                data-confirm-ok="Delete all"
+                data-confirm-variant="danger"
+            >
+                {% csrf_token %}
+                {% include "includes/tab_post_fields.html" %}
+                <button type="submit" class="btn btn-small btn-outline btn-logout">Delete all</button>
+            </form>
+        </div>
+    {% endif %}
+</div>
+
+{% if notifications %}
+    <ul class="notification-list">
+        {% for item in notifications %}
+            <li class="notification-item{% if not item.is_read %} notification-item--unread{% endif %}">
+                <div class="notification-copy">
+                    <strong>{{ item.title }}</strong>
+                    <p>{{ item.message }}</p>
+                    <time datetime="{{ item.created_at|date:'c' }}">{{ item.created_at|date:"M j, Y, g:i A" }}</time>
+                </div>
+                <div class="notification-actions">
+                    {% if item.link %}
+                        <form action="{% url 'notification_mark_read' item.pk %}{% if bikibedia_tab_id %}?__tab={{ bikibedia_tab_id }}{% endif %}" method="post">
+                            {% csrf_token %}
+                            {% include "includes/tab_post_fields.html" %}
+                            <button type="submit" class="btn btn-small btn-primary">Open</button>
+                        </form>
+                    {% endif %}
+                    <form action="{% url 'notification_delete' item.pk %}{% if bikibedia_tab_id %}?__tab={{ bikibedia_tab_id }}{% endif %}" method="post">
+                        {% csrf_token %}
+                        {% include "includes/tab_post_fields.html" %}
+                        <button type="submit" class="btn btn-small btn-outline" title="Delete notification">Delete</button>
+                    </form>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="moderation-empty">No notifications yet.</p>
+{% endif %}
+{% endblock %}

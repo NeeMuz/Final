@@ -1,0 +1,202 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Bikibedia{% endblock %}</title>
+    <script>
+    (function () {
+        var themeKey = 'bikibedia_theme';
+        var savedTheme = localStorage.getItem(themeKey);
+        var theme = savedTheme === 'dark' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = theme;
+    })();
+    </script>
+    <script>
+    (function () {
+        var TAB_KEY = 'bikibedia_tab_id';
+        var PARAM = '__tab';
+        var tabId = sessionStorage.getItem(TAB_KEY);
+        if (!tabId) {
+            tabId = (window.crypto && crypto.randomUUID)
+                ? crypto.randomUUID()
+                : ('t' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+            sessionStorage.setItem(TAB_KEY, tabId);
+        }
+        var url = new URL(window.location.href);
+        if (url.searchParams.get(PARAM) !== tabId) {
+            url.searchParams.set(PARAM, tabId);
+            window.location.replace(url.toString());
+            return;
+        }
+        window.BIKIBEDIA_TAB_ID = tabId;
+        document.documentElement.dataset.bikibediaTabReady = '1';
+    })();
+    </script>
+    {% block extra_head %}{% endblock %}
+    <link rel="stylesheet" href="{% static 'wiki/css/wiki.css' %}?v=61">
+    {% block page_styles %}{% endblock %}
+</head>
+<body>
+    <div id="mw-page-base"></div>
+
+    <div id="content-wrapper">
+        <aside id="mw-panel">
+            <div id="p-logo">
+                <a class="logo-text-link" href="{% url 'home' %}">
+                    <span class="logo-image-box">
+                        <img src="https://i.imgur.com/ByzFr8j.png" alt="Bikibedia logo" width="135" height="135" loading="eager" decoding="async">
+                    </span>
+                    <strong>Bikibedia</strong>
+                    <span class="logo-tagline">The free encyclopedia</span>
+                </a>
+            </div>
+
+            <nav class="portal" id="p-navigation">
+                <h3>Navigation</h3>
+                <ul>
+                    <li class="{% if page == 'home' %}selected{% endif %}">
+                        <a href="{% url 'home' %}">Main page</a>
+                    </li>
+                    <li class="{% if page == 'articles' %}selected{% endif %}">
+                        <a href="{% url 'articles' %}">All articles</a>
+                    </li>
+                </ul>
+            </nav>
+
+            <nav class="portal sidebar-articles">
+                <h3>Articles</h3>
+                {% if sidebar_articles %}
+                    <ul>
+                        {% for item in sidebar_articles %}
+                            <li class="{% if page == 'article' and request.resolver_match.kwargs.slug == item.slug %}selected{% endif %}">
+                                <a href="{% url 'article' item.slug %}">
+                                    <span class="sidebar-article-title">{{ item.title }}</span>
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="sidebar-empty">No articles yet.</p>
+                {% endif %}
+            </nav>
+        </aside>
+
+        <header id="mw-head">
+            <form id="searchform" action="{% url 'articles' %}" method="get">
+                <div class="search-bar">
+                    <input type="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search Bikibedia" aria-label="Search Bikibedia">
+                    <button type="submit" class="btn-search">Search</button>
+                </div>
+            </form>
+            <nav id="p-personal">
+                {% if user.is_authenticated %}
+                    {# Signed-in users switch the theme from their profile page. #}
+                    <div class="session-chip" title="This tab keeps its own login. Open a new tab to use another account.">
+                        <span class="session-chip-dot" aria-hidden="true"></span>
+                        <span class="session-chip-name">{{ user.username }}</span>
+                    </div>
+                    <div class="profile-trigger header-profile-trigger">
+                        <button type="button" class="avatar-btn" data-profile-card-trigger aria-expanded="false" title="Profile card">
+                            {% if user_profile.avatar %}
+                                <img src="{{ user_profile.avatar.url }}" alt="Profile photo">
+                            {% else %}
+                                <span class="avatar-placeholder">{{ user_profile.initials }}</span>
+                            {% endif %}
+                        </button>
+                        {% with card_user=user card_profile=user_profile card_role=user_stats.role card_articles_count=user_stats.articles %}
+                            {% include "includes/user_profile_card.html" %}
+                        {% endwith %}
+                    </div>
+                    {% if user.is_staff %}
+                        <a href="{% url 'moderation_queue' %}" class="btn btn-small btn-moderation">
+                            Moderation<span data-live-moderation-badge>{% if moderation_pending_count %} ({{ moderation_pending_count }}){% endif %}</span>
+                        </a>
+                        <a href="/admin/" class="btn btn-small btn-admin" target="_blank" rel="noopener noreferrer">Admin panel</a>
+                    {% endif %}
+                    <a href="{% url 'notifications' %}" class="btn btn-small btn-outline notifications-btn" title="Notifications">
+                        Notifications<span data-live-notification-badge>{% if unread_notifications_count %} ({{ unread_notifications_count }}){% endif %}</span>
+                    </a>
+                    <form class="logout-form" action="{% url 'logout' %}{% if bikibedia_tab_id %}?__tab={{ bikibedia_tab_id }}{% endif %}" method="post">
+                        {% csrf_token %}
+                        {% include "includes/tab_post_fields.html" %}
+                        <button type="submit" class="btn btn-small btn-outline btn-logout">Log out</button>
+                    </form>
+                {% else %}
+                    {# Guests have no profile page, so they keep a header toggle. #}
+                    {% include "includes/theme_dock.html" %}
+                    <a href="{% url 'register' %}" class="btn btn-small btn-outline">Create account</a>
+                    <a href="{% url 'login' %}" class="btn btn-small btn-primary">Log in</a>
+                {% endif %}
+            </nav>
+        </header>
+
+        <main id="content" role="main">
+            <div id="bodyContent">
+                <div id="siteSub">From Bikibedia, the free encyclopedia</div>
+                <div id="contentSub">{% block subtitle %}{% endblock %}</div>
+
+                {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                        <div class="flash flash-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div id="mw-head-bar">
+                    <ul class="mw-head-tabs">
+                    {% if page == 'home' %}
+                        <li class="selected"><span>Main page</span></li>
+                    {% elif page == 'article' %}
+                        <li class="selected"><span>Article</span></li>
+                    {% elif page == 'articles' %}
+                        <li class="selected"><span>All articles</span></li>
+                    {% elif page == 'article_create' or page == 'article_edit' %}
+                        <li class="selected"><span>Edit article</span></li>
+                    {% elif page == 'login' %}
+                        <li class="selected"><span>Log in</span></li>
+                    {% elif page == 'register' %}
+                        <li class="selected"><span>Create account</span></li>
+                    {% elif page == 'profile' %}
+                        <li class="selected"><span>My account</span></li>
+                    {% elif page == 'change_password' %}
+                        <li class="selected"><span>Change password</span></li>
+                    {% elif page == 'notifications' %}
+                        <li class="selected"><span>Notifications</span></li>
+                    {% elif page == 'moderation_queue' or page == 'moderation_review_article' or page == 'moderation_review_revision' %}
+                        <li class="selected"><span>Moderation</span></li>
+                    {% elif page == 'license' %}
+                        <li class="selected"><span>License</span></li>
+                    {% endif %}
+                    </ul>
+                </div>
+
+                <article id="mw-content-text">
+                    {% block content %}{% endblock %}
+                </article>
+            </div>
+        </main>
+
+        <footer id="footer">
+            <ul id="footer-info">
+                <li>Text is available under the <a href="{% url 'license' %}">Bikibedia Free Pedal License</a>.</li>
+            </ul>
+        </footer>
+    </div>
+    {% include "includes/confirm_dialog.html" %}
+    <script src="{% static 'wiki/js/tab-session.js' %}?v=1"></script>
+    <script src="{% static 'wiki/js/theme.js' %}?v=4"></script>
+    <script src="{% static 'wiki/js/confirm-dialog.js' %}?v=1"></script>
+    <script src="{% static 'wiki/js/profile-card.js' %}?v=1"></script>
+    <script src="{% static 'wiki/js/live-updates.js' %}?v=2"></script>
+    <script src="{% static 'wiki/js/form-validation.js' %}?v=1"></script>
+    {% if user.is_authenticated %}
+        <script>window.BIKIBEDIA_USER_ID = {{ user.pk }};</script>
+        <script src="{% static 'wiki/js/presence.js' %}?v=1"></script>
+    {% endif %}
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ form_title }} — Bikibedia{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css">
+{% endblock %}
+
+{% block page_styles %}
+    <link rel="stylesheet" href="{% static 'wiki/css/quill-theme.css' %}?v=7">
+{% endblock %}
+
+{% block content %}
+<h1 id="firstHeading">{{ form_title }}</h1>
+
+{% if requires_moderation %}
+<div class="article-status-banner article-status-banner--pending">
+    <strong>Moderation required</strong>
+    <span>
+        {% if article and article.is_public %}
+            Your edits will be sent to moderators. The current version stays on the site until approved.
+        {% else %}
+            The article will be sent to moderators before it appears on Bikibedia.
+        {% endif %}
+    </span>
+</div>
+{% endif %}
+
+<form class="mw-form article-form" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% include "includes/tab_post_fields.html" %}
+    {% if form.non_field_errors %}
+        <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% if form.errors %}
+        <div class="form-errors">Could not publish. Check the highlighted fields below.</div>
+    {% endif %}
+
+    <div class="article-author-bar">
+        <div class="profile-trigger">
+            <button type="button" class="author-bar-avatar" data-profile-card-trigger aria-expanded="false" title="Your profile">
+                {% if user_profile.avatar %}
+                    <img src="{{ user_profile.avatar.url }}" alt="{{ user.username }}">
+                {% else %}
+                    <span class="avatar-placeholder">{{ user_profile.initials }}</span>
+                {% endif %}
+            </button>
+            {% with card_user=user card_profile=user_profile card_role=user_stats.role card_articles_count=user_stats.articles %}
+                {% include "includes/user_profile_card.html" %}
+            {% endwith %}
+        </div>
+        <div class="author-bar-text">
+            <span class="author-bar-label">Writing as</span>
+            <strong class="author-bar-name">{{ user.username }}</strong>
+        </div>
+    </div>
+
+    <section class="form-section">
+        <h2 class="form-section-title">Basics</h2>
+        <label for="{{ form.title.id_for_label }}">Title</label>
+        {{ form.title }}
+        {% if form.title.errors %}<div class="field-error">{{ form.title.errors }}</div>{% endif %}
+        <p class="field-help">{{ form.title.help_text }}</p>
+
+        <label for="{{ form.introduction.id_for_label }}">Introduction</label>
+        {{ form.introduction }}
+        {% if form.introduction.errors %}<div class="field-error">{{ form.introduction.errors }}</div>{% endif %}
+        <p class="field-help">{{ form.introduction.help_text }}</p>
+    </section>
+
+    <section class="form-section form-section-editor">
+        <h2 class="form-section-title">Article text</h2>
+        <p class="form-section-note">Кликните в пустую строку под фото, чтобы писать там. Title и Introduction — отдельные поля выше.</p>
+        <div class="wysiwyg-shell">
+            <div id="wysiwyg-editor" class="wysiwyg-editor" data-upload-url="{% url 'upload_inline_image' %}"></div>
+            {{ form.body_text }}
+        </div>
+        {% if form.body_text.errors %}<div class="field-error">{{ form.body_text.errors }}</div>{% endif %}
+    </section>
+
+    <section class="form-section form-section-cover">
+        <h2 class="form-section-title">Cover image <span class="label-muted">(optional)</span></h2>
+        <p class="form-section-note">Shown in the article infobox, separate from photos inside the text.</p>
+        <div class="cover-image-picker">
+            <div class="cover-image-preview-wrap">
+                <img id="cover-image-preview" class="cover-image-preview"{% if form.instance.image %} src="{{ form.instance.image.url }}" alt=""{% else %} hidden alt=""{% endif %}>
+                <div id="cover-image-placeholder" class="cover-image-placeholder"{% if form.instance.image %} hidden{% endif %} role="button" tabindex="0" aria-label="Add cover image">
+                    <span class="cover-image-placeholder-icon" aria-hidden="true">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="3" y="5" width="18" height="14" rx="2.5" stroke="currentColor" stroke-width="1.5"/>
+                            <circle cx="8.5" cy="10" r="1.75" fill="currentColor"/>
+                            <path d="M6 17l4.2-4.2a1 1 0 0 1 1.4 0L15 16l1.8-1.8a1 1 0 0 1 1.4 0L20 15.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <span class="cover-image-placeholder-title">Add cover</span>
+                    <span class="cover-image-placeholder-hint">Infobox thumbnail</span>
+                </div>
+            </div>
+            <div class="cover-image-actions">
+                <label class="btn btn-outline cover-image-browse">
+                    Choose cover
+                    {{ form.image }}
+                </label>
+                <button type="button" id="cover-image-clear" class="btn btn-small cover-image-clear"{% if not form.instance.image %} hidden{% endif %}>Remove</button>
+                {{ form.clear_cover }}
+            </div>
+        </div>
+        {% if form.image.errors %}<div class="field-error">{{ form.image.errors }}</div>{% endif %}
+    </section>
+
+    <div class="form-actions article-form-actions">
+        {% if article %}
+            <a href="{% url 'article' article.slug %}" class="btn">Cancel</a>
+        {% else %}
+            <a href="{% url 'articles' %}" class="btn">Cancel</a>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">{% if requires_moderation %}Submit for review{% else %}Publish{% endif %}</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+<script src="{% static 'wiki/js/wysiwyg-editor.js' %}?v=36"></script>
+{% endblock %}

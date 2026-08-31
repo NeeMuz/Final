@@ -1,0 +1,22 @@
+{% comment %}
+Light/dark switch. `dock_class` lets a page add a modifier, e.g. "theme-dock--compact".
+{% endcomment %}
+<button
+    type="button"
+    class="theme-dock{% if dock_class %} {{ dock_class }}{% endif %}"
+    data-theme-toggle
+    role="switch"
+    aria-checked="false"
+    aria-label="Toggle dark mode"
+    title="Toggle theme"
+>
+    <span class="theme-dock-track" aria-hidden="true">
+        <span class="theme-dock-glider"></span>
+        <span class="theme-dock-option theme-dock-option--light">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </span>
+        <span class="theme-dock-option theme-dock-option--dark">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5z"/></svg>
+        </span>
+    </span>
+</button>

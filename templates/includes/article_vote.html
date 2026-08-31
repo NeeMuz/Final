@@ -1,0 +1,25 @@
+<div class="article-vote-wrap">
+    {% if user.is_authenticated and article.is_public %}
+        <form
+            class="article-vote-pill{% if user_vote == 1 %} article-vote-pill--liked{% elif user_vote == -1 %} article-vote-pill--disliked{% else %} article-vote-pill--neutral{% endif %}"
+            action="{% url 'article_vote' article.slug %}{% if bikibedia_tab_id %}?__tab={{ bikibedia_tab_id }}{% endif %}"
+            method="post"
+            data-article-vote-form
+        >
+            {% csrf_token %}
+            {% include "includes/tab_post_fields.html" %}
+            <button type="submit" name="value" value="1" class="article-vote-btn article-vote-btn--up" aria-label="Like" title="Like">👍</button>
+            <span class="article-vote-score" data-vote-score>{{ vote_score_display }}</span>
+            <button type="submit" name="value" value="-1" class="article-vote-btn article-vote-btn--down" aria-label="Dislike" title="Dislike">👎</button>
+        </form>
+    {% else %}
+        <div class="article-vote-pill article-vote-pill--readonly" aria-label="Article score">
+            <span class="article-vote-icon" aria-hidden="true">👍</span>
+            <span class="article-vote-score" data-vote-score>{{ vote_score_display }}</span>
+            <span class="article-vote-icon" aria-hidden="true">👎</span>
+        </div>
+        {% if not user.is_authenticated and article.is_public %}
+            <a class="article-vote-login-hint" href="{% url 'login' %}?next={{ request.path|urlencode }}{% if bikibedia_tab_id %}&amp;__tab={{ bikibedia_tab_id }}{% endif %}">Sign in to vote</a>
+        {% endif %}
+    {% endif %}
+</div>

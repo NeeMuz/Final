@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load wiki_extras %}
+
+{% block title %}Review article — Bikibedia{% endblock %}
+
+{% block content %}
+<h1 id="firstHeading">Review article</h1>
+<p class="moderation-lead">
+    Submitted by {% if submission.author %}{{ submission.author.username }}{% else %}Unknown{% endif %}
+    · {{ submission.submitted_at|default:submission.created_at|date:"M j, Y, g:i A" }}
+</p>
+
+<div class="moderation-review-layout">
+    <section class="portal-box moderation-preview">
+        <h2>{{ submission.title }}</h2>
+        {% if submission.image %}
+            <div class="moderation-cover">
+                <img src="{{ submission.image.url }}" alt="{{ submission.title }}">
+            </div>
+        {% endif %}
+        <p class="lead">{{ submission.introduction }}</p>
+        <div class="article-body wiki-formatted">{{ submission.body_text|wiki_markup }}</div>
+    </section>
+
+    <aside class="portal-box moderation-panel">
+        <h2>Decision</h2>
+        <form method="post" class="mw-form moderation-form">
+            {% csrf_token %}
+            {% include "includes/tab_post_fields.html" %}
+            <label for="{{ form.comment.id_for_label }}">{{ form.comment.label }}</label>
+            {{ form.comment }}
+            {% if form.comment.errors %}<div class="field-error">{{ form.comment.errors }}</div>{% endif %}
+            <div class="form-actions moderation-actions">
+                <button type="submit" name="action" value="approve" class="btn btn-primary">Approve &amp; publish</button>
+                <button type="submit" name="action" value="reject" class="btn btn-outline btn-logout">Send back</button>
+                <a href="{% url 'moderation_queue' %}" class="btn">Back to queue</a>
+            </div>
+        </form>
+    </aside>
+</div>
+{% endblock %}

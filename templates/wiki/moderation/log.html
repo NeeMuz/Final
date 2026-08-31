@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Moderation log — Bikibedia{% endblock %}
+
+{% block content %}
+<h1 id="firstHeading">Moderation log</h1>
+<p class="moderation-lead">
+    {{ total_count }} record{{ total_count|pluralize }} in the audit trail.
+    <a href="{% url 'moderation_queue' %}">Back to the queue</a>
+</p>
+
+<form class="mod-log-filters" method="get">
+    {% include "includes/tab_post_fields.html" %}
+    <label for="mod-log-action">Action</label>
+    <select id="mod-log-action" name="action" class="input">
+        <option value="">All actions</option>
+        {% for value, label in action_choices %}
+            <option value="{{ value }}"{% if value == selected_action %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+
+    <label for="mod-log-actor">Moderator</label>
+    <input id="mod-log-actor" type="search" name="actor" class="input" value="{{ actor_query }}" placeholder="Username">
+
+    <button type="submit" class="btn btn-small btn-primary">Filter</button>
+    {% if selected_action or actor_query %}
+        <a href="{% url 'moderation_log' %}" class="btn btn-small">Reset</a>
+    {% endif %}
+</form>
+
+{% if entries %}
+    <ul class="mod-log-list">
+        {% for entry in entries %}
+            {% include "includes/moderation_log_entry.html" %}
+        {% endfor %}
+    </ul>
+
+    {% if page_obj.has_other_pages %}
+        <nav class="mod-log-pagination" aria-label="Moderation log pages">
+            {% if page_obj.has_previous %}
+                <a class="btn btn-small" href="?page={{ page_obj.previous_page_number }}{% if selected_action %}&amp;action={{ selected_action }}{% endif %}{% if actor_query %}&amp;actor={{ actor_query|urlencode }}{% endif %}{% if bikibedia_tab_id %}&amp;__tab={{ bikibedia_tab_id }}{% endif %}">Previous</a>
+            {% endif %}
+            <span class="mod-log-pagination-status">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a class="btn btn-small" href="?page={{ page_obj.next_page_number }}{% if selected_action %}&amp;action={{ selected_action }}{% endif %}{% if actor_query %}&amp;actor={{ actor_query|urlencode }}{% endif %}{% if bikibedia_tab_id %}&amp;__tab={{ bikibedia_tab_id }}{% endif %}">Next</a>
+            {% endif %}
+        </nav>
+    {% endif %}
+{% else %}
+    <p class="moderation-empty">Nothing matches these filters yet.</p>
+{% endif %}
+{% endblock %}

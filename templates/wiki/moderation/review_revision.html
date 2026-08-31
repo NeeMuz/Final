@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load wiki_extras %}
+
+{% block title %}Review edit — Bikibedia{% endblock %}
+
+{% block content %}
+<h1 id="firstHeading">Review edit</h1>
+<p class="moderation-lead">
+    {{ revision.submitted_by.username }} edited «{{ article.title }}»
+    · {{ revision.created_at|date:"M j, Y, g:i A" }}
+    · <a href="{% url 'article' article.slug %}">View live article</a>
+</p>
+
+<div class="moderation-review-layout moderation-review-layout--revision">
+    <div class="moderation-compare">
+        <section class="portal-box moderation-preview moderation-preview--current">
+            <h2>Current live version</h2>
+            {% if article.image %}
+                <div class="moderation-cover">
+                    <img src="{{ article.image.url }}" alt="{{ article.title }}">
+                </div>
+            {% endif %}
+            <p class="lead">{{ article.introduction }}</p>
+            <div class="article-body wiki-formatted">{{ article.body_text|wiki_markup }}</div>
+        </section>
+
+        <section class="portal-box moderation-preview">
+            <h2>Proposed version</h2>
+            {% if revision.image %}
+                <div class="moderation-cover">
+                    <img src="{{ revision.image.url }}" alt="{{ revision.title }}">
+                </div>
+            {% elif revision.remove_cover %}
+                <p class="moderation-note">Cover image will be removed.</p>
+            {% endif %}
+            <p class="lead">{{ revision.introduction }}</p>
+            <div class="article-body wiki-formatted">{{ revision.body_text|wiki_markup }}</div>
+        </section>
+    </div>
+
+    <aside class="portal-box moderation-panel">
+        <h2>Decision</h2>
+        <form method="post" class="mw-form moderation-form">
+            {% csrf_token %}
+            {% include "includes/tab_post_fields.html" %}
+            <label for="{{ form.comment.id_for_label }}">{{ form.comment.label }}</label>
+            {{ form.comment }}
+            {% if form.comment.errors %}<div class="field-error">{{ form.comment.errors }}</div>{% endif %}
+            <div class="form-actions moderation-actions">
+                <button type="submit" name="action" value="approve" class="btn btn-primary">Approve edits</button>
+                <button type="submit" name="action" value="reject" class="btn btn-outline btn-logout">Send back</button>
+                <a href="{% url 'moderation_queue' %}" class="btn">Back to queue</a>
+            </div>
+        </form>
+    </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Log in — Bikibedia{% endblock %}
+
+{% block content %}
+<h1 id="firstHeading">Log in</h1>
+
+<p>Enter your username and password to access your Bikibedia account.</p>
+
+<form class="mw-form" method="post">
+    {% csrf_token %}
+    {% include "includes/tab_post_fields.html" %}
+    {% if form.non_field_errors %}
+        <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <label for="{{ form.username.id_for_label }}">Username</label>
+    {{ form.username }}
+    {% if form.username.errors %}<div class="field-error">{{ form.username.errors }}</div>{% endif %}
+
+    <label for="{{ form.password.id_for_label }}">Password</label>
+    {{ form.password }}
+    {% if form.password.errors %}<div class="field-error">{{ form.password.errors }}</div>{% endif %}
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Log in</button>
+        <a href="{% url 'register' %}" class="btn">Create account</a>
+    </div>
+</form>
+{% endblock %}
