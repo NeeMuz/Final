@@ -7,10 +7,6 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# =========================================================
-# SECURITY
-# =========================================================
-
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
     "django-insecure-local-development-key-change-me"
@@ -25,10 +21,6 @@ ALLOWED_HOSTS = [
 ]
 
 
-# =========================================================
-# APPLICATIONS
-# =========================================================
-
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -36,15 +28,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     "wiki",
     "accounts",
 ]
 
-
-# =========================================================
-# AUTHENTICATION
-# =========================================================
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "profile"
@@ -70,62 +57,37 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# =========================================================
-# MIDDLEWARE
-# =========================================================
-
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-
     "accounts.middleware.TabSessionMiddleware",
-
     "django.middleware.common.CommonMiddleware",
-
     "django.middleware.csrf.CsrfViewMiddleware",
-
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-
     "accounts.middleware.LastSeenMiddleware",
-
     "django.contrib.messages.middleware.MessageMiddleware",
-
     "accounts.middleware.TabRedirectMiddleware",
-
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-
-# =========================================================
-# URLS / WSGI
-# =========================================================
 
 ROOT_URLCONF = "Bikibedia.urls"
 
 WSGI_APPLICATION = "Bikibedia.wsgi.application"
 
 
-# =========================================================
-# TEMPLATES
-# =========================================================
-
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-
         "DIRS": [
             BASE_DIR / "templates",
         ],
-
         "APP_DIRS": True,
-
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-
                 "wiki.context_processors.site",
-
                 "accounts.context_processors.user_profile",
                 "accounts.context_processors.tab_session",
                 "accounts.context_processors.notifications",
@@ -135,12 +97,7 @@ TEMPLATES = [
 ]
 
 
-# =========================================================
-# DATABASE
-# =========================================================
-
 DATABASE_URL = os.environ.get("DATABASE_URL")
-
 
 if DATABASE_URL:
     DATABASES = {
@@ -152,7 +109,6 @@ if DATABASE_URL:
         )
     }
 else:
-    # Локально Windows используем SQLite
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -161,10 +117,6 @@ else:
     }
 
 
-# =========================================================
-# LANGUAGE / TIME
-# =========================================================
-
 LANGUAGE_CODE = "ru-ru"
 
 TIME_ZONE = "Europe/Berlin"
@@ -172,10 +124,6 @@ TIME_ZONE = "Europe/Berlin"
 USE_I18N = True
 USE_TZ = True
 
-
-# =========================================================
-# STATIC FILES
-# =========================================================
 
 STATIC_URL = "/static/"
 
@@ -186,36 +134,21 @@ STATICFILES_DIRS = [
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 
-# =========================================================
-# MEDIA
-# =========================================================
-
 MEDIA_URL = "/media/"
 
 MEDIA_ROOT = BASE_DIR / "media"
 
 
-# =========================================================
-# CSRF
-# =========================================================
-
 CSRF_TRUSTED_ORIGINS = [
-    "https://final-lovat-eight.vercel.app",
+    "https://final-fjg68rn5a-dgs6.vercel.app",
+    "https://*.vercel.app",
 ]
 
-
-# =========================================================
-# SECURITY FOR VERCEL
-# =========================================================
 
 SECURE_PROXY_SSL_HEADER = (
     "HTTP_X_FORWARDED_PROTO",
     "https",
 )
 
-
-# =========================================================
-# DEFAULT
-# =========================================================
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
