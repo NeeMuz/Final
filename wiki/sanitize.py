@@ -39,29 +39,18 @@ def _filter_classes(html):
     return TAG_WITH_CLASS_RE.sub(replace, html)
 
 
-# Captions used to live inside the photo frame (contenteditable=false), which
-# trapped the caret. Keep them as a normal paragraph immediately after the
-# thumbnail so authors can type under a photo.
-_THUMB_CAPTION_RE = re.compile(
-    r'(<div class="[^"]*wiki-thumb[^"]*">)(.*?)'
-    r'<p class="[^"]*wiki-thumb-caption[^"]*"[^>]*>(.*?)</p>\s*'
-    r'(</div>)',
-    re.IGNORECASE | re.DOTALL,
+# Empty figure labels/captions are dropped; non-empty ones stay inside the frame.
+_THUMB_EMPTY_TEXT_RE = re.compile(
+    r'<p class="[^"]*wiki-thumb-(?:label|caption)[^"]*"[^>]*>\s*(?:<br\s*/?>)?\s*</p>\s*',
+    re.IGNORECASE,
 )
 
 
-def _hoist_thumb_captions(html):
-    def replace(match):
-        caption = match.group(3).strip()
-        block = match.group(1) + match.group(2) + match.group(4)
-        if caption:
-            return f'{block}<p>{caption}</p>'
-        return f'{block}<p><br></p>'
-
+def _clean_empty_thumb_text(html):
     previous = None
     while previous != html:
         previous = html
-        html = _THUMB_CAPTION_RE.sub(replace, html)
+        html = _THUMB_EMPTY_TEXT_RE.sub('', html)
     return html
 
 
@@ -76,7 +65,7 @@ def sanitize_article_html(html):
         strip=True,
     )
     cleaned = _filter_classes(cleaned)
-    cleaned = _hoist_thumb_captions(cleaned)
+    cleaned = _clean_empty_thumb_text(cleaned)
     return bleach.linkify(
         cleaned,
         callbacks=[bleach.callbacks.nofollow],

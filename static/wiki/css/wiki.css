@@ -1569,6 +1569,20 @@ button.article-action--delete:hover {
 .article-form {
     max-width: none;
     width: 100%;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.article-form input,
+.article-form textarea,
+.article-form select,
+.article-form button,
+.article-form .btn,
+.article-form .author-bar-avatar,
+.article-form .profile-trigger,
+.article-form .cover-image-placeholder {
+    user-select: auto;
+    -webkit-user-select: auto;
 }
 
 .article-form label {
@@ -2037,6 +2051,8 @@ button.article-action--delete:hover {
     border-radius: 14px;
     background: var(--paper);
     box-shadow: 0 1px 4px var(--shadow-color);
+    user-select: text;
+    -webkit-user-select: text;
 }
 
 .form-section-title {
@@ -2147,11 +2163,17 @@ button.article-action--delete:hover {
 }
 
 .wysiwyg-editor .ql-editor .wiki-thumb + p {
-    clear: both;
     min-height: 2.4em;
     cursor: text;
     user-select: text;
     -webkit-user-select: text;
+}
+
+/* Floated thumbs: let the next paragraph wrap beside the photo. */
+.wysiwyg-editor .ql-editor .wiki-thumb--center + p,
+.wysiwyg-editor .ql-editor .wiki-thumb--wide + p,
+.wysiwyg-editor .ql-editor .wiki-thumb--none + p {
+    clear: both;
 }
 
 .wysiwyg-editor .ql-editor img {
@@ -2271,65 +2293,86 @@ button.article-action--delete:hover {
     height: auto;
 }
 
-/* Static text in the document; editing happens in .wiki-thumb-caption-input. */
-.wysiwyg-editor .ql-editor .wiki-thumb-caption {
+/* Figure text — read-only labels when idle; inline fields while selected. */
+.wysiwyg-editor .ql-editor .wiki-thumb-label {
     display: block;
     width: 100%;
-    margin: 0.35rem 0 0;
-    padding: 0.25rem 0.35rem;
-    border-radius: 4px;
-    background: transparent;
-    color: var(--muted);
-    font-size: 0.82rem;
-    line-height: 1.4;
+    margin: 0 0 0.35rem;
+    padding: 0;
+    color: var(--ink);
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.35;
     text-align: center;
-    box-sizing: border-box;
-    min-height: 1.5rem;
-    cursor: text;
-    transition: background-color 0.15s ease, color 0.15s ease;
     overflow-wrap: anywhere;
     word-break: break-word;
 }
 
-.wysiwyg-editor .ql-editor .wiki-thumb-caption:hover {
-    background: var(--accent-soft);
-    color: var(--ink);
+.wysiwyg-editor .ql-editor .wiki-thumb-label:empty,
+.wysiwyg-editor .ql-editor .wiki-thumb-caption:empty {
+    display: none;
 }
 
-.wysiwyg-editor .ql-editor .wiki-thumb-caption:empty::before {
-    content: attr(data-placeholder);
-    color: var(--text-faint);
-}
-
-/* Lives in .ql-container but outside .ql-editor, so Quill neither observes
-   its mutations nor pulls focus out of it. */
-/* Overlay caption field: must beat .mw-form textarea { resize: vertical }. */
-.wysiwyg-shell .wiki-thumb-caption-input,
-.mw-form .wysiwyg-shell .wiki-thumb-caption-input {
-    position: absolute;
-    z-index: 36;
-    width: auto;
-    min-height: 0;
-    max-height: 8rem;
-    margin: 0;
-    padding: 0.25rem 0.35rem;
-    border: 1px solid var(--tab-line);
-    border-radius: 4px;
-    background: var(--input-bg);
-    color: var(--ink);
-    font: inherit;
+.wysiwyg-editor .ql-editor .wiki-thumb-caption {
+    display: block;
+    width: 100%;
+    margin: 0.35rem 0 0;
+    padding: 0;
+    color: var(--muted);
     font-size: 0.82rem;
     line-height: 1.4;
     text-align: center;
-    resize: none;
-    overflow-x: hidden;
-    overflow-y: auto;
-    outline: none;
-    box-sizing: border-box;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tab-line) 22%, transparent);
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
-.wiki-thumb-caption-input[hidden] {
+.wysiwyg-editor .ql-editor .wiki-thumb-field {
+    display: none;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0.3rem 0.35rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--ink);
+    font: inherit;
+    line-height: 1.4;
+    text-align: center;
+    resize: none;
+    overflow: hidden;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.wysiwyg-editor .ql-editor .wiki-thumb.is-selected .wiki-thumb-field {
+    display: block;
+}
+
+.wysiwyg-editor .ql-editor .wiki-thumb-field--label {
+    margin-bottom: 0.35rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.wysiwyg-editor .ql-editor .wiki-thumb-field--caption {
+    margin-top: 0.35rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+
+.wysiwyg-editor .ql-editor .wiki-thumb-field:focus {
+    border-color: var(--tab-line);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tab-line) 20%, transparent);
+}
+
+.mw-form .wysiwyg-shell .wiki-thumb-field {
+    resize: none;
+    min-height: 0;
+}
+
+.wysiwyg-editor .ql-editor .wiki-thumb.is-selected .wiki-thumb-label,
+.wysiwyg-editor .ql-editor .wiki-thumb.is-selected .wiki-thumb-caption {
     display: none;
 }
 
@@ -2337,12 +2380,12 @@ button.article-action--delete:hover {
     position: absolute;
     z-index: 35;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.3rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    padding: 0.35rem;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: 12px;
     background: var(--paper);
     box-shadow: 0 8px 24px var(--tooltip-shadow);
 }
@@ -2352,14 +2395,15 @@ button.article-action--delete:hover {
 }
 
 .image-toolbar-group {
-    display: inline-flex;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     gap: 0.15rem;
 }
 
 .image-toolbar-group + .image-toolbar-group {
-    padding-left: 0.35rem;
-    border-left: 1px solid var(--border-subtle);
+    padding-top: 0.35rem;
+    border-top: 1px solid var(--border-subtle);
 }
 
 .image-toolbar-btn {
@@ -2587,7 +2631,7 @@ body.image-resize-active {
     cursor: pointer;
 }
 
-/* Link tooltip styling lives in quill-theme.css. */
+/* Link tooltip styling lives in quill-theme.css (.ql-tooltip). */
 
 .cover-image-clear[hidden] {
     display: none;
@@ -2697,6 +2741,23 @@ body.image-resize-active {
     width: 100%;
     max-width: 100%;
     height: auto;
+}
+
+.wiki-formatted .wiki-thumb-label {
+    margin: 0 0 0.35rem;
+    padding: 0 0.15rem;
+    color: var(--ink);
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: center;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.wiki-formatted .wiki-thumb-label:empty {
+    display: none;
 }
 
 .wiki-formatted .wiki-thumb-caption {

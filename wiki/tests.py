@@ -2,7 +2,8 @@ from django.contrib.auth.models import User
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from accounts.forms import RegisterForm
+from accounts.forms import ProfileForm, RegisterForm
+from accounts.models import Profile
 
 from .forms import ArticleForm
 from .moderation import approve_article, reject_article
@@ -286,6 +287,44 @@ class AuthFieldCheckTests(TestCase):
         self.assertGreaterEqual(report['score'], 3)
 
 
+class ProfileFormTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='admin',
+            email='admin@example.com',
+            password='sup3r-Secret!1',
+        )
+        self.profile = Profile.objects.get(user=self.user)
+
+    def test_can_update_birth_date_with_grandfathered_reserved_username(self):
+        form = ProfileForm(
+            {
+                'username': 'admin',
+                'email': 'admin@example.com',
+                'birth_date': '15.03.1990',
+            },
+            instance=self.profile,
+            user=self.user,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.birth_date.isoformat(), '1990-03-15')
+
+    def test_cannot_rename_to_reserved_username(self):
+        form = ProfileForm(
+            {
+                'username': 'root',
+                'email': 'admin@example.com',
+                'birth_date': '',
+            },
+            instance=self.profile,
+            user=self.user,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('username', form.errors)
+
+
 class ChromeLayoutTests(TestCase):
     def test_guest_home_has_logo_and_header_theme_dock(self):
         html = self.client.get(reverse('home')).content.decode()
@@ -312,16 +351,19 @@ class ChromeLayoutTests(TestCase):
         self.assertIn('wysiwyg-editor.js?v=33', html)
         self.assertIn('quill-theme.css?v=7', html)
 
-    def test_admin_index_explains_votes_and_log(self):
+    def test_admin_index_shows_standard_app_panels(self):
         admin_user = User.objects.create_superuser(
             username='siteadmin', email='a@example.com', password='sup3r-Secret!1',
         )
         client = Client()
         client.force_login(admin_user)
         html = client.get('/admin/').content.decode()
-        self.assertIn('Article votes', html)
-        self.assertIn('Moderation log', html)
-        self.assertIn('At a glance', html)
+        self.assertIn('Wiki articles', html)
+        self.assertIn('Article revisions', html)
+        self.assertIn('Notifications', html)
+        self.assertNotIn('bikibedia-admin-dashboard', html)
+        self.assertNotIn('Article votes', html)
+        self.assertNotIn('At a glance', html)
 
 
 EASTER_ISLAND_BODY = (
@@ -351,12 +393,15 @@ class EasterIslandArticleTests(TestCase):
     def test_sanitizer_keeps_photo_caption_and_text_after(self):
         out = sanitize_article_html(EASTER_ISLAND_BODY)
         self.assertIn('wiki-thumb--center', out)
+        self.assertIn('wiki-thumb-caption', out)
         self.assertIn('Moai on the slopes of Rano Raraku.', out)
         self.assertIn('UNESCO named Easter Island', out)
-        self.assertGreater(out.find('wiki-thumb'), 0)
-        self.assertGreater(out.find('UNESCO named Easter Island'), out.find('wiki-thumb'))
-        thumb_close = out.find('</div>', out.find('wiki-thumb'))
-        self.assertGreater(out.find('Moai on the slopes of Rano Raraku.'), thumb_close)
+        thumb_start = out.find('wiki-thumb')
+        thumb_end = out.find('</div>', thumb_start)
+        caption_pos = out.find('Moai on the slopes of Rano Raraku.', thumb_start)
+        self.assertGreater(caption_pos, thumb_start)
+        self.assertLess(caption_pos, thumb_end)
+        self.assertGreater(out.find('UNESCO named Easter Island'), thumb_end)
 
     def test_form_accepts_article_with_photo_and_following_text(self):
         form = ArticleForm(article_payload(

@@ -113,9 +113,6 @@
                 </div>
                 <a href="{% url 'change_password' %}" class="btn btn-outline profile-security-btn">Change password</a>
                 <a href="{% url 'article_create' %}" class="btn btn-primary">Create article</a>
-                {% if user.is_staff %}
-                    <a href="/admin/" class="btn btn-admin" target="_blank" rel="noopener noreferrer">Admin panel</a>
-                {% endif %}
             </div>
         {% endif %}
     </section>

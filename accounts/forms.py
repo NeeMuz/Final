@@ -179,6 +179,10 @@ class ProfileForm(forms.ModelForm):
             raise forms.ValidationError(
                 f'Username must be at least {MIN_USERNAME_LENGTH} characters long.'
             )
+        current = normalize_username(self.user.username if self.user else '')
+        if current and username.lower() == current.lower():
+            # Existing accounts may predate reserved-name rules; only block renames.
+            return username
         if username.lower() in RESERVED_USERNAMES:
             raise forms.ValidationError('This username is reserved. Pick another one.')
         exclude_pk = self.user.pk if self.user else None

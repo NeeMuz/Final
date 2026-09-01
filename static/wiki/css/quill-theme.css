@@ -357,33 +357,27 @@
 .wysiwyg-shell .ql-background.ql-picker .ql-picker-item[data-value="rose"] { background-color: var(--article-bg-rose); }
 .wysiwyg-shell .ql-background.ql-picker .ql-picker-item[data-value="sand"] { background-color: var(--article-bg-sand); }
 
-/* Snow's built-in tooltip is replaced by .wiki-link-tooltip. */
+/* Quill link tooltip — themed to match Bikibedia. */
 .wysiwyg-shell .ql-tooltip {
-    display: none;
-}
-
-.wiki-link-tooltip {
-    position: absolute;
     z-index: 40;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
     min-width: 16rem;
     max-width: calc(100% - 1rem);
-    padding: 0.7rem 0.75rem;
+    padding: 0.75rem 0.8rem;
     border: 1px solid var(--editor-picker-border);
-    border-radius: 8px;
+    border-radius: 10px;
     background-color: var(--editor-picker-bg);
     color: var(--ink);
-    box-shadow: 0 12px 30px var(--tooltip-shadow);
+    box-shadow:
+        0 12px 30px var(--tooltip-shadow),
+        0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+    font-family: inherit;
+    white-space: normal;
 }
 
-.wiki-link-tooltip[hidden] {
-    display: none;
-}
-
-.wiki-link-tooltip label {
-    margin: 0;
+.wysiwyg-shell .ql-tooltip::before {
+    content: 'Link URL';
+    display: block;
+    margin: 0 0 0.35rem;
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -391,26 +385,60 @@
     color: var(--muted);
 }
 
-.wiki-link-tooltip input {
+.wysiwyg-shell .ql-tooltip input[type='text'] {
     width: 100%;
     min-height: 0;
-    margin: 0;
-    padding: 0.45rem 0.6rem;
+    margin: 0 0 0.55rem;
+    padding: 0.5rem 0.65rem;
     border: 1px solid var(--editor-picker-border);
-    border-radius: 5px;
+    border-radius: 6px;
     background-color: var(--input-bg);
     color: var(--ink);
     font: inherit;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.wiki-link-tooltip-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
+.wysiwyg-shell .ql-tooltip input[type='text']:focus {
+    border-color: var(--tab-line);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tab-line) 22%, transparent);
 }
 
-.wiki-link-tooltip-actions .btn-small {
+.wysiwyg-shell .ql-tooltip a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-height: 2rem;
-    padding: 0.3rem 0.7rem;
+    margin: 0 0.35rem 0 0;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
     font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.wysiwyg-shell .ql-tooltip a.ql-action {
+    border-color: var(--btn-bg);
+    background: var(--btn-bg);
+    color: var(--btn-text);
+}
+
+.wysiwyg-shell .ql-tooltip a.ql-action:hover {
+    background: var(--btn-hover);
+    border-color: var(--btn-hover);
+}
+
+.wysiwyg-shell .ql-tooltip a.ql-remove {
+    color: var(--error);
+}
+
+.wysiwyg-shell .ql-tooltip a.ql-preview {
+    display: none;
 }

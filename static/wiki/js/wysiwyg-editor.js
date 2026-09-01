@@ -67,10 +67,61 @@
         return (node.textContent || '').trim();
     }
 
+    function normalizeThumbText(value) {
+        return String(value || '').trim();
+    }
+
+    function buildThumbTextNode(className, placeholder, text) {
+        var normalized = normalizeThumbText(text);
+        if (!normalized) {
+            return null;
+        }
+        var node = document.createElement('p');
+        node.className = className;
+        node.setAttribute('data-placeholder', placeholder);
+        node.textContent = normalized;
+        return node;
+    }
+
     function serializeEditorHtml() {
         var clone = editorRoot.cloneNode(true);
-        clone.querySelectorAll('.wiki-thumb .wiki-thumb-caption').forEach(function (node) {
-            node.remove();
+        clone.querySelectorAll('.wiki-thumb').forEach(function (thumb) {
+            thumb.classList.remove('is-selected');
+            thumb.querySelectorAll('img.is-selected').forEach(function (img) {
+                img.classList.remove('is-selected');
+            });
+
+            var img = thumb.querySelector('img');
+            var labelField = thumb.querySelector('.wiki-thumb-field--label');
+            var captionField = thumb.querySelector('.wiki-thumb-field--caption');
+            if (labelField) {
+                var labelText = normalizeThumbText(labelField.value);
+                labelField.remove();
+                thumb.querySelectorAll('.wiki-thumb-label').forEach(function (node) {
+                    node.remove();
+                });
+                if (labelText && img) {
+                    thumb.insertBefore(buildThumbTextNode('wiki-thumb-label', 'Text above image', labelText), img);
+                }
+            }
+            if (captionField) {
+                var captionText = normalizeThumbText(captionField.value);
+                captionField.remove();
+                thumb.querySelectorAll('.wiki-thumb-caption').forEach(function (node) {
+                    node.remove();
+                });
+                if (captionText) {
+                    thumb.appendChild(buildThumbTextNode('wiki-thumb-caption', 'Caption', captionText));
+                }
+            }
+
+            thumb.querySelectorAll('.wiki-thumb-label, .wiki-thumb-caption').forEach(function (node) {
+                if (!normalizeThumbText(node.textContent)) {
+                    node.remove();
+                } else {
+                    node.classList.remove('is-empty');
+                }
+            });
         });
         var html = clone.innerHTML.trim();
         if (html === '<p><br></p>') {
@@ -148,11 +199,18 @@
         var src = escapeAttr(value && value.src);
         var width = value && value.width ? ' width="' + escapeAttr(value.width) + '"' : '';
         var height = value && value.height ? ' height="' + escapeAttr(value.height) + '"' : '';
-        return (
-            '<div class="wiki-thumb wiki-thumb--' + align + '">' +
-                '<img src="' + src + '" draggable="false"' + width + height + '>' +
-            '</div>'
-        );
+        var label = normalizeThumbText(value && value.label);
+        var caption = normalizeThumbText(value && value.caption);
+        var parts = ['<div class="wiki-thumb wiki-thumb--' + align + '">'];
+        if (label) {
+            parts.push('<p class="wiki-thumb-label">' + escapeAttr(label) + '</p>');
+        }
+        parts.push('<img src="' + src + '" draggable="false"' + width + height + '>');
+        if (caption) {
+            parts.push('<p class="wiki-thumb-caption">' + escapeAttr(caption) + '</p>');
+        }
+        parts.push('</div>');
+        return parts.join('');
     }
 
     function parseThumbAlign(node) {
@@ -169,13 +227,15 @@
 
     function thumbValueFromNode(node) {
         var img = node.querySelector('img');
+        var label = node.querySelector('.wiki-thumb-label');
         var caption = node.querySelector('.wiki-thumb-caption');
         return {
             src: img ? img.getAttribute('src') : '',
             width: img ? img.getAttribute('width') : '',
             height: img ? img.getAttribute('height') : '',
             align: parseThumbAlign(node),
-            caption: readCaptionText(caption),
+            label: label ? readCaptionText(label) : '',
+            caption: caption ? readCaptionText(caption) : '',
             alt: img ? img.getAttribute('alt') : '',
         };
     }
@@ -193,6 +253,11 @@
         node.classList.add('wiki-thumb');
         applyThumbAlign(node, (value && value.align) || 'center');
 
+        var labelNode = buildThumbTextNode('wiki-thumb-label', 'Text above image', value && value.label);
+        if (labelNode) {
+            node.appendChild(labelNode);
+        }
+
         var img = document.createElement('img');
         img.setAttribute('src', (value && value.src) || '');
         img.setAttribute('draggable', 'false');
@@ -206,6 +271,11 @@
             img.setAttribute('alt', value.alt);
         }
         node.appendChild(img);
+
+        var captionNode = buildThumbTextNode('wiki-thumb-caption', 'Caption', value && value.caption);
+        if (captionNode) {
+            node.appendChild(captionNode);
+        }
 
         return node;
     };
@@ -312,6 +382,7 @@
         var payload = {
             src: url,
             align: 'center',
+            label: '',
             caption: '',
         };
         var insertAt = typeof index === 'number' ? index : Math.max(0, quill.getLength() - 1);
@@ -339,32 +410,13 @@
     }
 
     var activeBasicsField = null;
-    var scrollLock = null;
 
-    function lockPageScroll() {
-        if (scrollLock) {
-            return;
+    function isLinkTooltipActive() {
+        if (!editorContainer) {
+            return false;
         }
-        scrollLock = { y: window.scrollY };
-        document.body.style.position = 'fixed';
-        document.body.style.top = '-' + scrollLock.y + 'px';
-        document.body.style.left = '0';
-        document.body.style.right = '0';
-        document.body.style.width = '100%';
-    }
-
-    function unlockPageScroll() {
-        if (!scrollLock) {
-            return;
-        }
-        var y = scrollLock.y;
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.left = '';
-        document.body.style.right = '';
-        document.body.style.width = '';
-        window.scrollTo(0, y);
-        scrollLock = null;
+        var tooltip = editorContainer.querySelector('.ql-tooltip');
+        return !!(tooltip && tooltip.classList.contains('ql-editing') && !tooltip.classList.contains('ql-hidden'));
     }
 
     function preservePageScroll(action) {
@@ -385,6 +437,9 @@
     /* Quill keeps a hidden focus target; pointer-events alone does not stop keyboard
        focus or scroll-into-view. Blur the DOM nodes directly and drop the selection. */
     function blurQuillEditor() {
+        if (isLinkTooltipActive()) {
+            return;
+        }
         if (!quill || !editorRoot) {
             return;
         }
@@ -396,12 +451,19 @@
         }
         if (editorContainer) {
             editorContainer.querySelectorAll('[contenteditable], input, textarea').forEach(function (node) {
+                if (node !== editorRoot && node.closest('.ql-tooltip')) {
+                    return;
+                }
+                if (node.closest('.wiki-thumb-field')) {
+                    return;
+                }
                 if (node !== editorRoot && document.activeElement === node && typeof node.blur === 'function') {
                     node.blur();
                 }
             });
         }
-        if (document.activeElement === editorRoot || editorShell.contains(document.activeElement)) {
+        if (document.activeElement === editorRoot ||
+            (editorShell.contains(document.activeElement) && !document.activeElement.closest('.ql-tooltip'))) {
             try {
                 quill.setSelection(null, 'silent');
             } catch (error) {
@@ -424,7 +486,6 @@
             if (editorRoot) {
                 editorRoot.setAttribute('tabindex', '-1');
             }
-            lockPageScroll();
             blurQuillEditor();
             if (imageTools) {
                 imageTools.clear();
@@ -432,7 +493,6 @@
             return;
         }
         activeBasicsField = null;
-        unlockPageScroll();
         if (editorRoot) {
             editorRoot.removeAttribute('tabindex');
         }
@@ -446,6 +506,9 @@
     }
 
     function releaseFormFocus() {
+        if (isLinkTooltipActive()) {
+            return;
+        }
         preservePageScroll(function () {
             blurQuillEditor();
             var active = document.activeElement;
@@ -481,34 +544,76 @@
         if (!range) {
             range = { index: Math.max(0, quill.getLength() - 1), length: 0 };
         }
-        var current = '';
-        try {
-            var fmt = quill.getFormat(range);
-            current = typeof fmt.link === 'string' ? fmt.link : '';
-        } catch (error) {
-            current = '';
-        }
-        var raw = window.prompt('Link URL', current || 'https://');
-        if (raw === null) {
-            quill.setSelection(range.index, range.length, 'silent');
-            return;
-        }
-        raw = String(raw).trim();
         quill.setSelection(range.index, range.length, 'silent');
-        if (!raw) {
-            quill.format('link', false, 'user');
+        window.setTimeout(function () {
+            if (!quill.theme || !quill.theme.tooltip || typeof quill.theme.tooltip.edit !== 'function') {
+                return;
+            }
+            var liveRange = quill.getSelection() || range;
+            var tooltip = quill.theme.tooltip;
+            if (liveRange.length > 0) {
+                tooltip.linkRange = liveRange;
+                tooltip.edit('link', quill.getText(liveRange));
+            } else {
+                delete tooltip.linkRange;
+                tooltip.edit('link');
+            }
+        }, 0);
+    }
+
+    /* Quill Snow closes the link tooltip on every selection-change while
+       ql-editing is set. Keep the editor open until Save, Remove, Escape,
+       or an outside click explicitly dismisses it. */
+    function patchQuillLinkTooltip() {
+        var tooltip = quill.theme && quill.theme.tooltip;
+        if (!tooltip || tooltip.__wikiLinkPatch) {
             return;
         }
-        if (!/^(https?:\/\/|mailto:|\/|#)/i.test(raw)) {
-            raw = 'https://' + raw;
+        tooltip.__wikiLinkPatch = true;
+
+        var nativeHide = tooltip.hide.bind(tooltip);
+
+        function closeLinkEditor() {
+            tooltip.root.classList.remove('ql-editing');
+            nativeHide();
         }
-        if (range.length === 0) {
-            var label = raw.replace(/^https?:\/\//i, '');
-            quill.insertText(range.index, label, 'link', raw, 'user');
-            quill.setSelection(range.index, label.length, 'silent');
-        } else {
-            quill.formatText(range.index, range.length, 'link', raw, 'user');
+
+        tooltip.hide = function () {
+            if (tooltip.root.classList.contains('ql-editing')) {
+                return;
+            }
+            nativeHide();
+        };
+
+        var nativeSave = tooltip.save.bind(tooltip);
+        tooltip.save = function () {
+            tooltip.root.classList.remove('ql-editing');
+            nativeSave();
+        };
+
+        var nativeCancel = tooltip.cancel.bind(tooltip);
+        tooltip.cancel = function () {
+            tooltip.root.classList.remove('ql-editing');
+            nativeCancel();
+        };
+
+        var removeBtn = tooltip.root.querySelector('a.ql-remove');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function () {
+                tooltip.root.classList.remove('ql-editing');
+            }, true);
         }
+
+        document.addEventListener('click', function (event) {
+            if (!tooltip.root.classList.contains('ql-editing') ||
+                tooltip.root.classList.contains('ql-hidden')) {
+                return;
+            }
+            if (tooltip.root.contains(event.target) || event.target.closest('.ql-link')) {
+                return;
+            }
+            closeLinkEditor();
+        }, true);
     }
 
     quill = new Quill(mount, {
@@ -520,35 +625,12 @@
                     ['bold', 'italic', 'underline', 'strike'],
                     [{ color: COLOR_PALETTE }, { background: COLOR_PALETTE }],
                     [{ size: SIZE_PALETTE }],
-                    [{ header: [2, 3, false] }],
                     [{ list: 'ordered' }, { list: 'bullet' }],
                     ['blockquote', 'code-block'],
-                    ['link', 'image'],
+                    ['image'],
                     ['clean'],
                 ],
                 handlers: {
-                    header: function headerHandler(value) {
-                        var range = this.quill.getSelection() || savedRange;
-                        if (range && range.length > 0) {
-                            /* Heading is a block format, so Quill would restyle
-                               the whole paragraph. A selection means the author
-                               wants those words bigger — that is `size`. */
-                            var sizeForHeader = { '1': 'huge', '2': 'huge', '3': 'large' };
-                            this.quill.setSelection(range.index, range.length, 'silent');
-                            this.quill.format(
-                                'size',
-                                value ? (sizeForHeader[String(value)] || 'large') : false
-                            );
-                            return;
-                        }
-                        if (range) {
-                            this.quill.setSelection(range.index, range.length, 'silent');
-                        }
-                        this.quill.format('header', value || false);
-                    },
-                    link: function linkHandler() {
-                        applyLinkFromPrompt();
-                    },
                     image: function imageHandler() {
                         var input = document.createElement('input');
                         input.setAttribute('type', 'file');
@@ -588,6 +670,7 @@
     }
 
     setupColorPickers();
+    patchQuillLinkTooltip();
 
     quill.on('selection-change', function (range) {
         if (range) {
@@ -600,24 +683,10 @@
         if (sizePicker) {
             sizePicker.setAttribute('title', 'Text size — changes only the selected words');
         }
-        var headerPicker = editorShell.querySelector('.ql-header');
-        if (headerPicker) {
-            headerPicker.setAttribute('title', 'Heading — whole paragraph. Select words and pick a size to enlarge just those.');
-        }
-        var linkBtn = editorShell.querySelector('.ql-link');
-        if (linkBtn) {
-            linkBtn.setAttribute('title', 'Insert or edit a link');
-        }
     })();
 
     quill.clipboard.addMatcher('DIV.wiki-thumb', function (node) {
-        var value = thumbValueFromNode(node);
-        var delta = thumbInsertDelta(value);
-        if (value.caption) {
-            delta.insert(value.caption);
-        }
-        delta.insert('\n');
-        return delta;
+        return thumbInsertDelta(thumbValueFromNode(node)).insert('\n');
     });
 
     quill.clipboard.addMatcher('IMG', function (node) {
@@ -672,20 +741,6 @@
         }
     }
 
-    function hoistCaptionsOutOfThumbs() {
-        var captions = Array.from(editorRoot.querySelectorAll('.wiki-thumb .wiki-thumb-caption'));
-        captions.reverse().forEach(function (caption) {
-            var thumb = caption.closest('.wiki-thumb');
-            var text = (caption.textContent || '').trim();
-            var blot = thumb && Quill.find(thumb);
-            caption.remove();
-            if (!blot || !text) {
-                return;
-            }
-            quill.insertText(quill.getIndex(blot) + 1, text + '\n', 'silent');
-        });
-    }
-
     function prepareEditorImages() {
         editorRoot.querySelectorAll('img').forEach(function (img) {
             img.setAttribute('draggable', 'false');
@@ -725,6 +780,128 @@
         var toolbar = null;
         var dragState = null;
 
+        function autosizeThumbField(field) {
+            if (!field) {
+                return;
+            }
+            field.style.height = 'auto';
+            field.style.height = Math.max(28, field.scrollHeight) + 'px';
+        }
+
+        function bindThumbField(field) {
+            field.addEventListener('mousedown', function (event) {
+                event.stopPropagation();
+            });
+            field.addEventListener('input', function () {
+                autosizeThumbField(field);
+                syncBodyToSource();
+            });
+        }
+
+        function openThumbEditFields(thumb) {
+            if (!thumb) {
+                return;
+            }
+            var img = thumb.querySelector('img');
+            if (!img) {
+                return;
+            }
+
+            var labelNode = thumb.querySelector('.wiki-thumb-label');
+            var captionNode = thumb.querySelector('.wiki-thumb-caption');
+            var labelValue = labelNode ? readCaptionText(labelNode) : '';
+            var captionValue = captionNode ? readCaptionText(captionNode) : '';
+            if (labelNode) {
+                labelNode.remove();
+            }
+            if (captionNode) {
+                captionNode.remove();
+            }
+
+            var labelField = thumb.querySelector('.wiki-thumb-field--label');
+            var captionField = thumb.querySelector('.wiki-thumb-field--caption');
+
+            if (!labelField) {
+                labelField = document.createElement('textarea');
+                labelField.className = 'wiki-thumb-field wiki-thumb-field--label';
+                labelField.placeholder = 'Текст над фото';
+                labelField.rows = 1;
+                labelField.setAttribute('aria-label', 'Text above image');
+                bindThumbField(labelField);
+                thumb.insertBefore(labelField, img);
+            }
+            if (!captionField) {
+                captionField = document.createElement('textarea');
+                captionField.className = 'wiki-thumb-field wiki-thumb-field--caption';
+                captionField.placeholder = 'Подпись под фото';
+                captionField.rows = 2;
+                captionField.setAttribute('aria-label', 'Image caption');
+                bindThumbField(captionField);
+                thumb.appendChild(captionField);
+            }
+
+            labelField.value = labelValue;
+            captionField.value = captionValue;
+            autosizeThumbField(labelField);
+            autosizeThumbField(captionField);
+        }
+
+        function commitThumbEditFields(thumb) {
+            if (!thumb) {
+                return;
+            }
+
+            var img = thumb.querySelector('img');
+            var labelField = thumb.querySelector('.wiki-thumb-field--label');
+            var captionField = thumb.querySelector('.wiki-thumb-field--caption');
+            if (!labelField && !captionField) {
+                return;
+            }
+
+            var labelText = labelField ? normalizeThumbText(labelField.value) : '';
+            var captionText = captionField ? normalizeThumbText(captionField.value) : '';
+
+            if (labelField) {
+                labelField.remove();
+            }
+            if (captionField) {
+                captionField.remove();
+            }
+            thumb.querySelectorAll('.wiki-thumb-label, .wiki-thumb-caption').forEach(function (node) {
+                node.remove();
+            });
+
+            if (labelText && img) {
+                thumb.insertBefore(buildThumbTextNode('wiki-thumb-label', 'Text above image', labelText), img);
+            }
+            if (captionText) {
+                thumb.appendChild(buildThumbTextNode('wiki-thumb-caption', 'Caption', captionText));
+            }
+
+            syncBodyToSource();
+        }
+
+        function isThumbTextEditorTarget(target) {
+            return !!(target && target.closest && target.closest('.wiki-thumb-field'));
+        }
+
+        function focusThumbTextField(kind) {
+            if (!activeThumb) {
+                return;
+            }
+            var selector = kind === 'label' ? '.wiki-thumb-field--label' : '.wiki-thumb-field--caption';
+            var field = activeThumb.querySelector(selector);
+            if (!field) {
+                openThumbEditFields(activeThumb);
+                field = activeThumb.querySelector(selector);
+            }
+            if (field) {
+                window.setTimeout(function () {
+                    field.focus();
+                }, 0);
+            }
+        }
+
         overlay = document.createElement('div');
         overlay.className = 'image-resize-overlay';
         overlay.hidden = true;
@@ -748,7 +925,6 @@
                 '<button type="button" class="image-toolbar-btn" data-align="center" title="Center"><span aria-hidden="true">↔</span></button>' +
                 '<button type="button" class="image-toolbar-btn" data-align="right" title="Float right"><span aria-hidden="true">→</span></button>' +
                 '<button type="button" class="image-toolbar-btn" data-align="wide" title="Full width"><span aria-hidden="true">▭</span></button>' +
-                '<button type="button" class="image-toolbar-btn" data-align="none" title="Inline"><span aria-hidden="true">▪</span></button>' +
             '</div>' +
             '<div class="image-toolbar-group" role="group" aria-label="Move image">' +
                 '<button type="button" class="image-toolbar-btn" data-move="up" title="Move up">↑</button>' +
@@ -840,11 +1016,22 @@
             overlay.style.height = targetRect.height + 'px';
 
             if (!toolbar.hidden) {
+                var thumbRect = activeThumb ?
+                    activeThumb.getBoundingClientRect() :
+                    targetRect;
                 var toolbarWidth = toolbar.offsetWidth || 0;
-                var left = targetRect.left - containerRect.left + (targetRect.width / 2) - (toolbarWidth / 2);
+                var toolbarHeight = toolbar.offsetHeight || 0;
+                var left = thumbRect.left - containerRect.left - toolbarWidth - 8;
+                var top = thumbRect.top - containerRect.top + (thumbRect.height / 2) - (toolbarHeight / 2);
+
+                if (left < 4) {
+                    left = thumbRect.right - containerRect.left + 8;
+                }
                 left = clampSize(left, 4, editorContainer.clientWidth - toolbarWidth - 4);
+                top = clampSize(top, 4, editorContainer.clientHeight - toolbarHeight - 4);
+
                 toolbar.style.left = left + 'px';
-                toolbar.style.top = Math.max(4, targetRect.top - containerRect.top - toolbar.offsetHeight - 8) + 'px';
+                toolbar.style.top = top + 'px';
             }
         }
 
@@ -859,6 +1046,9 @@
         }
 
         function clearSelection() {
+            if (activeThumb) {
+                commitThumbEditFields(activeThumb);
+            }
             activeImg = null;
             activeThumb = null;
             overlay.hidden = true;
@@ -876,8 +1066,13 @@
                 return;
             }
 
+            var nextThumb = img.closest('.wiki-thumb');
+            if (activeThumb && activeThumb !== nextThumb) {
+                commitThumbEditFields(activeThumb);
+            }
+
             activeImg = img;
-            activeThumb = img.closest('.wiki-thumb');
+            activeThumb = nextThumb;
 
             editorRoot.querySelectorAll('img.is-selected').forEach(function (node) {
                 node.classList.remove('is-selected');
@@ -894,6 +1089,9 @@
             overlay.hidden = false;
             toolbar.hidden = false;
             updateToolbarState();
+            if (activeThumb) {
+                openThumbEditFields(activeThumb);
+            }
             syncOverlay();
         }
 
@@ -946,11 +1144,22 @@
             updateToolbarState();
             syncOverlay();
             syncBodyToSource();
+            if (align === 'left' || align === 'right') {
+                ensureEditableSpace();
+                var img = activeThumb.querySelector('img');
+                if (img) {
+                    focusAfterThumb(img);
+                }
+            }
         }
 
         function deleteSelectedThumb() {
             if (!activeImg) {
                 return;
+            }
+
+            if (activeThumb) {
+                commitThumbEditFields(activeThumb);
             }
 
             var thumb = activeThumb;
@@ -1106,7 +1315,18 @@
                 return;
             }
 
-            if (event.target.closest('.image-toolbar')) {
+            if (event.target.closest('.image-toolbar') || isThumbTextEditorTarget(event.target)) {
+                return;
+            }
+
+            var textTarget = event.target.closest('.wiki-thumb-label, .wiki-thumb-caption');
+            if (textTarget) {
+                var textThumb = textTarget.closest('.wiki-thumb');
+                var textImg = textThumb && textThumb.querySelector('img');
+                if (textImg) {
+                    select(textImg);
+                    focusThumbTextField(textTarget.classList.contains('wiki-thumb-label') ? 'label' : 'caption');
+                }
                 return;
             }
 
@@ -1165,6 +1385,7 @@
             select: select,
             clear: clearSelection,
             sync: syncOverlay,
+            isTextEditorTarget: isThumbTextEditorTarget,
         };
     })();
 
@@ -1174,9 +1395,6 @@
             if (!field) {
                 return;
             }
-            field.addEventListener('mousedown', function () {
-                lockPageScroll();
-            });
             field.addEventListener('focus', function () {
                 preservePageScroll(function () {
                     activeBasicsField = field;
@@ -1201,19 +1419,28 @@
             }
         });
 
-        form.addEventListener('mousedown', function (event) {
+        form.addEventListener('click', function (event) {
+            if (isLinkTooltipActive()) {
+                return;
+            }
             if (event.target.closest(
-                '.wysiwyg-shell, input, textarea, select, button, a, label, .profile-trigger, .profile-card, #cover-image-placeholder, .cover-image-preview-wrap'
+                '.wysiwyg-shell, input, textarea, select, button, a, label, .profile-trigger, .profile-card, #cover-image-placeholder, .cover-image-preview-wrap, .ql-tooltip'
             )) {
                 return;
             }
-            event.preventDefault();
+            var selection = window.getSelection();
+            if (selection && selection.toString().length > 0) {
+                return;
+            }
             releaseFormFocus();
         });
     }
 
     if (editorShell) {
         editorShell.addEventListener('focusin', function (event) {
+            if (isLinkTooltipActive() || event.target.closest('.ql-tooltip')) {
+                return;
+            }
             if (!form || !form.classList.contains('article-form--basics-focus')) {
                 return;
             }
@@ -1239,7 +1466,7 @@
             if (current) {
                 savedRange = current;
             }
-            if (event.target.closest('.ql-image') || event.target.closest('.ql-link')) {
+            if (event.target.closest('.ql-image')) {
                 return;
             }
             if (event.target.closest('button')) {
@@ -1347,7 +1574,6 @@
     if (source.value.trim()) {
         quill.setContents(quill.clipboard.convert(source.value), 'silent');
         migratePlainImages();
-        hoistCaptionsOutOfThumbs();
         normalizeLoadedImages();
     } else {
         prepareEditorImages();
@@ -1361,10 +1587,8 @@
             return;
         }
 
-        var container = editorContainer;
-
         var padding = 8;
-        var maxLeft = container.offsetWidth - tooltip.offsetWidth - padding;
+        var maxLeft = editorContainer.offsetWidth - tooltip.offsetWidth - padding;
         var left = parseFloat(tooltip.style.left) || 0;
 
         if (left < padding) {
@@ -1374,12 +1598,12 @@
         }
     }
 
-    var tooltip = editorContainer.querySelector('.ql-tooltip');
-    if (tooltip) {
-        var tooltipObserver = new MutationObserver(function () {
+    var linkTooltip = editorContainer.querySelector('.ql-tooltip');
+    if (linkTooltip) {
+        var linkTooltipObserver = new MutationObserver(function () {
             requestAnimationFrame(clampLinkTooltip);
         });
-        tooltipObserver.observe(tooltip, {
+        linkTooltipObserver.observe(linkTooltip, {
             attributes: true,
             attributeFilter: ['class', 'style'],
         });
@@ -1447,7 +1671,6 @@
 
     if (form) {
         form.addEventListener('submit', function () {
-            unlockPageScroll();
             imageTools.clear();
             syncBodyToSource();
         });

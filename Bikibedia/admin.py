@@ -1,35 +1,16 @@
 from django.contrib import admin, messages
-from django.contrib.admin import AdminSite
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
 from django.db.models import Count, Q, Sum
 
 from accounts.models import Notification, Profile
 from wiki.moderation import approve_article, approve_revision, reject_article, reject_revision
-from wiki.models import Article, ArticleRevision, ArticleVote, ModerationLogEntry
+from wiki.models import Article, ArticleRevision
 
 admin.site.site_header = 'Bikibedia administration'
 admin.site.site_title = 'Bikibedia admin'
-admin.site.index_title = 'Content, accounts, and review tools'
-admin.site.index_template = 'admin/bikibedia_index.html'
+admin.site.index_title = 'Site administration'
 admin.site.enable_nav_sidebar = True
-
-
-def _each_context(request):
-    ctx = AdminSite.each_context(admin.site, request)
-    ctx['site_stats'] = {
-        'users': User.objects.count(),
-        'articles': Article.objects.count(),
-        'pending_articles': Article.objects.filter(status=Article.STATUS_PENDING).count(),
-        'pending_edits': ArticleRevision.objects.filter(status=ArticleRevision.STATUS_PENDING).count(),
-        'votes': ArticleVote.objects.count(),
-        'log_entries': ModerationLogEntry.objects.count(),
-        'unread_notifications': Notification.objects.filter(is_read=False).count(),
-    }
-    return ctx
-
-
-admin.site.each_context = _each_context
 
 admin.site.unregister(User)
 admin.site.unregister(Group)
@@ -119,14 +100,6 @@ class ArticleRevisionInline(admin.TabularInline):
     show_change_link = True
 
 
-class ArticleVoteInline(admin.TabularInline):
-    model = ArticleVote
-    extra = 0
-    autocomplete_fields = ('user',)
-    readonly_fields = ('created_at', 'updated_at')
-    fields = ('user', 'value', 'updated_at')
-
-
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
     list_display = (
@@ -140,7 +113,7 @@ class ArticleAdmin(admin.ModelAdmin):
     autocomplete_fields = ('author', 'reviewed_by')
     date_hierarchy = 'created_at'
     list_per_page = 25
-    inlines = (ArticleRevisionInline, ArticleVoteInline)
+    inlines = (ArticleRevisionInline,)
     actions = ('approve_articles', 'reject_articles', 'unpublish_articles')
 
     def get_queryset(self, request):
@@ -197,40 +170,6 @@ class ArticleAdmin(admin.ModelAdmin):
             'fields': ('created_at', 'updated_at'),
         }),
     )
-
-
-@admin.register(ArticleVote)
-class ArticleVoteAdmin(admin.ModelAdmin):
-    list_display = ('article', 'user', 'value', 'updated_at')
-    list_filter = ('value', 'updated_at')
-    search_fields = ('article__title', 'user__username')
-    autocomplete_fields = ('article', 'user')
-    date_hierarchy = 'updated_at'
-    list_per_page = 50
-    actions = ('clear_votes',)
-
-    @admin.action(description='Delete selected votes')
-    def clear_votes(self, request, queryset):
-        deleted, _ = queryset.delete()
-        self.message_user(request, f'{deleted} vote(s) removed.', messages.SUCCESS)
-
-
-@admin.register(ModerationLogEntry)
-class ModerationLogEntryAdmin(admin.ModelAdmin):
-    list_display = ('created_at', 'action', 'target_title', 'actor')
-    list_filter = ('action', 'created_at')
-    search_fields = ('target_title', 'target_slug', 'actor__username', 'comment')
-    date_hierarchy = 'created_at'
-    list_per_page = 50
-    readonly_fields = (
-        'action', 'actor', 'article', 'target_title', 'target_slug', 'comment', 'created_at',
-    )
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
 
 
 @admin.register(ArticleRevision)
