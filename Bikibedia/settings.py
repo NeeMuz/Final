@@ -97,7 +97,7 @@ TEMPLATES = [
 ]
 
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DATABASE_URL = os.environ.get("postgres://d9f0af01289553bb35882716923f6558195f287a4d98cc1f49537bf1317fbb20:sk_hKmgmzIaRj4iRcqNIBIfN@db.prisma.io:5432/postgres?sslmode=require")
 
 if DATABASE_URL:
     DATABASES = {
