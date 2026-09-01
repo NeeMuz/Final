@@ -181,7 +181,6 @@ psycopg2-binary==2.9.12
 pure_eval==0.2.3
 py-ubjson==0.16.1
 pyarrow==25.0.0
-PyAudio==0.2.14
 pyclipper==1.4.0
 pycparser==3.0
 pydantic==2.12.5
